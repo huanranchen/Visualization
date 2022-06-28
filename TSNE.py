@@ -98,10 +98,12 @@ def T_SNE(X, y, if_save_image=False, **kwargs):
         plt.savefig(get_datetime_str() + ".png")
     plt.show()
 
+
+@torch.no_grad()
 def tsne_by_model(model: nn.Module,
                   loader: DataLoader,
-                  num_sumples = 1000,
-                  if_save_image = True):
+                  num_sumples=1000,
+                  if_save_image=True):
     assert num_sumples < len(loader), \
         'samples is how many batch size, it should be small than a epoch of data'
 
@@ -112,24 +114,23 @@ def tsne_by_model(model: nn.Module,
     feature = list(model.children())[:-1]
     print('now start computing')
 
-    with torch.no_grad():
-        for step, (x, y) in enumerate(tqdm(train_loader)):
-            x = x.to(device)
-            y = y.to(device)
-            if step >= 1000:
-                xs = torch.cat(xs, dim=0)
-                ys = torch.cat(ys, dim=0)
-                mask = ys < 10  # 因为多了效果不好
-                xs = xs[mask, :]
-                ys = ys[mask].unsqueeze(1)
-                T_SNE(xs, ys, if_save_image=if_save_image)
-                break
-            else:
-                for m in feature:
-                    x = m(x)
-                x = x.squeeze()
-                xs.append(x)
-                ys.append(y)
+    for step, (x, y) in enumerate(tqdm(train_loader)):
+        x = x.to(device)
+        y = y.to(device)
+        if step >= num_sumples:
+            xs = torch.cat(xs, dim=0)
+            ys = torch.cat(ys, dim=0)
+            mask = ys < 10  # 因为多了效果不好
+            xs = xs[mask, :]
+            ys = ys[mask].unsqueeze(1)
+            T_SNE(xs, ys, if_save_image=if_save_image)
+            break
+        else:
+            for m in feature:
+                x = m(x)
+            x = x.squeeze()
+            xs.append(x)
+            ys.append(y)
 
 
 if __name__ == '__main__':
@@ -159,4 +160,3 @@ if __name__ == '__main__':
                                                     transforms='train',
                                                     label2id_path=label2id_path,
                                                     test_image_path=test_image_path)
-
